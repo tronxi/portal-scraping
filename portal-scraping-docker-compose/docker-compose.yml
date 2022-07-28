@@ -1,0 +1,15 @@
+version: '3.8'
+services:
+  portal-mysql:
+    container_name: portal-mysql
+    image: mysql
+    env_file: .env
+    ports:
+      - "3306:3306"
+    volumes: 
+      - ./mysql:/var/lib/mysql
+    networks: 
+      - portal-net
+
+networks: 
+    portal-net:
