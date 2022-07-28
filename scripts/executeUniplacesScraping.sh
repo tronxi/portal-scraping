@@ -1,2 +1,2 @@
 #!/bin/bash
-python3 ../uniolaces-scraping/uniplacesScraping.py
+python3 ../uniplaces-scraping/uniplacesScraping.py
