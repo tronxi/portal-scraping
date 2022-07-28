@@ -12,7 +12,7 @@ from datetime import datetime
 import mysql.connector
 
 class Room:
-    def __init__(self, link, rentType, rentValue, neighbourhood, title, configuration, persons, bedrooms, bathrooms, city):
+    def __init__(self, link, rentType, rentValue, neighbourhood, title, configuration, persons, bedrooms, bathrooms, cityId):
         self.link = link
         self.rentType = rentType
         self.title = title
@@ -22,13 +22,13 @@ class Room:
         self.persons = persons
         self.bedrooms = bedrooms
         self.bathrooms = bathrooms
-        self.city = city
+        self.cityId = cityId
 
     def __str__(self):
         return (self.link + "\n" + 
                 self.rentValue + "\n" + 
                 self.rentType + "\n" +
-                self.city + "\n" +
+                self.cityId + "\n" +
                 self.neighbourhood + "\n" + 
                 self.title + "\n" + 
                 self.configuration + "\n" +
@@ -57,15 +57,16 @@ def performScrapingForCity(driver, connection, city):
 
     driver.get(generateUrlForCity(city))
     lastPage = extractLastPage(driver)
+    cityId = findIdByCity(connection, city)
 
     for actualPage in range(lastPage):
         actualPage += 1
         print("Scraping city:", city, actualPage, "/", lastPage)
         time.sleep(3)
         try:
-            findRoomsInActualPage(driver, connection, city)
+            performScrapingForCityInActualPage(driver, connection, cityId)
         except:
-            print("Error finding in actual page")
+            print("Error performing in actual page")
             time.sleep(3)
         if actualPage != lastPage:
             try:
@@ -81,18 +82,18 @@ def performScrapingForCity(driver, connection, city):
     diffTimeForCity = endTimeForCity - startTimeForCity
     print('Time for' ,city, ":", diffTimeForCity.total_seconds() / 60, "minutes")
 
-def findRoomsInActualPage(driver, connection, city):
+def performScrapingForCityInActualPage(driver, connection, cityId):
     rooms = driver.find_elements(By.XPATH, "/html/body/div[1]/div/main/section/div/*")
     for roomElement in rooms:
         if roomElement.tag_name == "a":
-            room = extractRoomInformation(roomElement=roomElement, city=city)
+            room = extractRoomInformation(roomElement=roomElement, cityId=cityId)
             exist = checkIfRoomExist(connection=connection, link=room.link)
             if exist:
                 updateRoom(connection=connection, room=room)
             else:
                 saveRoom(connection=connection, room=room)
 
-def extractRoomInformation(roomElement, city):
+def extractRoomInformation(roomElement, cityId):
     link = extractRoomLink(roomElement.get_attribute("href"))
     soupRoom = BeautifulSoup(roomElement.get_attribute('innerHTML'), 'html.parser')
     rentValueSoup = soupRoom.find("span", {"class": "rent__value"})
@@ -124,7 +125,7 @@ def extractRoomInformation(roomElement, city):
                 persons=persons,
                 bedrooms=bedrooms,
                 bathrooms=bathrooms,
-                city=city)
+                cityId=cityId)
     return room
 
 def extractValueOnSoupElementOrUndefined(soupElement):
@@ -183,8 +184,7 @@ def saveRoom(connection, room):
             (portal_id, city_id, link, rent_value, rent_type, neighbourhood, title, configuration, persons, bedrooms, bathrooms, creation_date)
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
-    cityId = findIdByCity(connection, room.city)
-    cursor.execute(sql, (0, cityId, room.link, room.rentValue, room.rentType, room.neighbourhood, room.title, room.configuration, room.persons, room.bedrooms, room.bathrooms, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+    cursor.execute(sql, (0, room.cityId, room.link, room.rentValue, room.rentType, room.neighbourhood, room.title, room.configuration, room.persons, room.bedrooms, room.bathrooms, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
     connection.commit()
 
 def updateRoom(connection, room):
@@ -203,13 +203,12 @@ def updateRoom(connection, room):
             modification_date = %s
         WHERE link = %s
     """
-    cityId = findIdByCity(connection, room.city)
-    cursor.execute(sql, (cityId, room.rentValue, room.rentType, room.neighbourhood, room.title, room.configuration, room.persons, room.bedrooms, room.bathrooms, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), room.link))
+    cursor.execute(sql, (room.cityId, room.rentValue, room.rentType, room.neighbourhood, room.title, room.configuration, room.persons, room.bedrooms, room.bathrooms, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), room.link))
     connection.commit()
 
 def createDatabaseConnection():
     dbConnection = mysql.connector.connect(
-    host="localhost",
+    host="tronxi.ddns.net",
     user="portal",
     password="portalpass",
     database="portal"
