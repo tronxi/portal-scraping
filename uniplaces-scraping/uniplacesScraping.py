@@ -41,8 +41,7 @@ def main():
     connection = createDatabaseConnection()
     driver = createDriver()
 
-    # cities = ["valencia"]
-    cities = findAllByCities(connection)
+    cities = findAllCities(connection)
     for city in cities:
         driver.get(generateUrlForCity(city))
         performScrapingForCity(driver, connection, city)
@@ -51,7 +50,7 @@ def main():
 
     endTime = datetime.now()
     diffTime = endTime - startTime
-    print("Total time in minutes:", diffTime.total_seconds() / 60,)
+    print("Total time:", diffTime.total_seconds() / 60, "minutes")
 
 def performScrapingForCity(driver, connection, city):
     startTimeForCity = datetime.now()
@@ -62,31 +61,36 @@ def performScrapingForCity(driver, connection, city):
     for actualPage in range(lastPage):
         actualPage += 1
         print("Scraping city:", city, actualPage, "/", lastPage)
-        time.sleep(1)
-        findRoomsInActualPage(driver, connection, city)
+        time.sleep(3)
+        try:
+            findRoomsInActualPage(driver, connection, city)
+        except:
+            print("Error finding in actual page")
+            time.sleep(3)
         if actualPage != lastPage:
-            changeToNextPage(driver)
-        time.sleep(2)
+            try:
+                changeToNextPage(driver)
+            except:
+                print("Error next page, retry...")
+                driver.get(driver.current_url)
+                time.sleep(5)
+                lastPage = extractLastPage(driver)
+                changeToNextPage(driver)
 
     endTimeForCity = datetime.now()
     diffTimeForCity = endTimeForCity - startTimeForCity
-    seconds = diffTimeForCity.total_seconds()
-    print('Time in seconds for city' ,city, ":", seconds)
+    print('Time for' ,city, ":", diffTimeForCity.total_seconds() / 60, "minutes")
 
 def findRoomsInActualPage(driver, connection, city):
     rooms = driver.find_elements(By.XPATH, "/html/body/div[1]/div/main/section/div/*")
     for roomElement in rooms:
-        try:
-            if roomElement.tag_name == "a":
-                room = extractRoomInformation(roomElement=roomElement, city=city)
-                exist = checkIfRoomExist(connection=connection, link=room.link)
-                if not exist:
-                    saveRoom(connection=connection, room=room)
-                else:
-                    updateRoom(connection=connection, room=room)
-        except:
-            print("Error")
-            # print(room)
+        if roomElement.tag_name == "a":
+            room = extractRoomInformation(roomElement=roomElement, city=city)
+            exist = checkIfRoomExist(connection=connection, link=room.link)
+            if exist:
+                updateRoom(connection=connection, room=room)
+            else:
+                saveRoom(connection=connection, room=room)
 
 def extractRoomInformation(roomElement, city):
     link = extractRoomLink(roomElement.get_attribute("href"))
@@ -143,7 +147,7 @@ def extractLastPage(driver):
 
 
 def changeToNextPage(driver):
-    driver.find_element(By.XPATH, "/html/body/div[1]/div/main/section/ul/li[4]/a").click()
+    WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, "/html/body/div[1]/div/main/section/ul/li[4]/a"))).click()
 
 def generateUrlForCity(city):
     return "https://www.uniplaces.com/accommodation/" + city
@@ -155,7 +159,7 @@ def findIdByCity(connection, city):
     result = cursor.fetchall()
     return result[0][0]
 
-def findAllByCities(connection):
+def findAllCities(connection):
     cities = []
     cursor = connection.cursor()
     sql = "SELECT name FROM cities"
