@@ -1,4 +1,3 @@
-from multiprocessing import connection
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -55,7 +54,6 @@ def main():
 def performScrapingForCity(driver, connection, city):
     startTimeForCity = datetime.now()
 
-    driver.get(generateUrlForCity(city))
     lastPage = extractLastPage(driver)
     cityId = findIdByCity(connection, city)
 
