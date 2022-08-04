@@ -10,8 +10,10 @@ import time
 from datetime import datetime
 import mysql.connector
 
+
 class Room:
-    def __init__(self, link, rentType, rentValue, neighbourhood, title, configuration, persons, bedrooms, bathrooms, cityId):
+    def __init__(self, link, rentType, rentValue, neighbourhood, title, configuration, persons, bedrooms, bathrooms,
+                 cityId):
         self.link = link
         self.rentType = rentType
         self.title = title
@@ -24,22 +26,22 @@ class Room:
         self.cityId = cityId
 
     def __str__(self):
-        return (self.link + "\n" + 
-                self.rentValue + "\n" + 
+        return (self.link + "\n" +
+                self.rentValue + "\n" +
                 self.rentType + "\n" +
                 self.cityId + "\n" +
-                self.neighbourhood + "\n" + 
-                self.title + "\n" + 
+                self.neighbourhood + "\n" +
+                self.title + "\n" +
                 self.configuration + "\n" +
                 self.persons + "\n" +
-                self.bedrooms + "\n" + 
+                self.bedrooms + "\n" +
                 self.bathrooms + "\n")
+
 
 def main():
     startTime = datetime.now()
     connection = createDatabaseConnection()
     driver = createDriver()
-
     cities = findAllCities(connection)
     for city in cities:
         driver.get(generateUrlForCity(city))
@@ -51,19 +53,22 @@ def main():
     diffTime = endTime - startTime
     print("Total time:", diffTime.total_seconds() / 60, "minutes")
 
+
 def performScrapingForCity(driver, connection, city):
     startTimeForCity = datetime.now()
 
     lastPage = extractLastPage(driver)
     cityId = findIdByCity(connection, city)
+    roomLinks = []
 
     for actualPage in range(lastPage):
         actualPage += 1
         print("Scraping city:", city, actualPage, "/", lastPage)
         time.sleep(3)
         try:
-            performScrapingForCityInActualPage(driver, connection, cityId)
-        except:
+            roomLinks += performScrapingForCityInActualPage(driver, connection, cityId)
+        except Exception as e:
+            print(e)
             print("Error performing in actual page")
             time.sleep(3)
         if actualPage != lastPage:
@@ -75,21 +80,28 @@ def performScrapingForCity(driver, connection, city):
                 time.sleep(5)
                 lastPage = extractLastPage(driver)
                 changeToNextPage(driver)
+    markAllRoomsInCityAsInactive(connection, cityId)
+    markAllFoundsAsActive(connection, roomLinks)
 
     endTimeForCity = datetime.now()
     diffTimeForCity = endTimeForCity - startTimeForCity
-    print('Time for' ,city, ":", diffTimeForCity.total_seconds() / 60, "minutes")
+    print('Time for', city, ":", diffTimeForCity.total_seconds() / 60, "minutes")
+
 
 def performScrapingForCityInActualPage(driver, connection, cityId):
+    roomLinks = []
     rooms = driver.find_elements(By.XPATH, "/html/body/div[1]/div/main/section/div/*")
     for roomElement in rooms:
         if roomElement.tag_name == "a":
             room = extractRoomInformation(roomElement=roomElement, cityId=cityId)
+            roomLinks.append(room.link)
             exist = checkIfRoomExist(connection=connection, link=room.link)
             if exist:
                 updateRoom(connection=connection, room=room)
             else:
                 saveRoom(connection=connection, room=room)
+    return roomLinks
+
 
 def extractRoomInformation(roomElement, cityId):
     link = extractRoomLink(roomElement.get_attribute("href"))
@@ -102,7 +114,7 @@ def extractRoomInformation(roomElement, cityId):
     persons = "undefined"
     bedrooms = "undefined"
     bathrooms = "undefined"
-    if configurationSoup != None:
+    if configurationSoup is not None:
         spans = configurationSoup.find_all("span")
         if len(spans) == 3:
             persons = extractValueOnSoupElementOrUndefined(spans[0])
@@ -114,17 +126,18 @@ def extractRoomInformation(roomElement, cityId):
     title = extractValueOnSoupElementOrUndefined(titleSoup)
     configuration = extractValueOnSoupElementOrUndefined(configurationSoup)
     rentType = extractValueOnSoupElementOrUndefined(rentTypeSoup)
-    room = Room(link=link, 
-                rentValue=rentValue, 
-                title=title, 
-                neighbourhood=neighbourhood, 
-                configuration=configuration, 
-                rentType=rentType, 
+    room = Room(link=link,
+                rentValue=rentValue,
+                title=title,
+                neighbourhood=neighbourhood,
+                configuration=configuration,
+                rentType=rentType,
                 persons=persons,
                 bedrooms=bedrooms,
                 bathrooms=bathrooms,
                 cityId=cityId)
     return room
+
 
 def extractValueOnSoupElementOrUndefined(soupElement):
     value = "undefined"
@@ -132,13 +145,16 @@ def extractValueOnSoupElementOrUndefined(soupElement):
         value = soupElement.get_text()
     return value
 
+
 def extractRoomLink(completeRoomHref):
     queryPosition = completeRoomHref.find("?")
     return completeRoomHref[:queryPosition]
 
+
 def extractLastPage(driver):
     try:
-        pages = WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.XPATH, "//*[@id='__next']/div/main/section/ul/li[3]"))).text
+        pages = WebDriverWait(driver, 5).until(
+            EC.presence_of_element_located((By.XPATH, "//*[@id='__next']/div/main/section/ul/li[3]"))).text
         separatorPosition = pages.find("/")
         return int(pages[separatorPosition + 1:])
     except:
@@ -146,10 +162,13 @@ def extractLastPage(driver):
 
 
 def changeToNextPage(driver):
-    WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, "/html/body/div[1]/div/main/section/ul/li[4]/a"))).click()
+    WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.XPATH, "/html/body/div[1]/div/main/section/ul/li[4]/a"))).click()
+
 
 def generateUrlForCity(city):
     return "https://www.uniplaces.com/accommodation/" + city
+
 
 def findIdByCity(connection, city):
     cursor = connection.cursor()
@@ -157,6 +176,7 @@ def findIdByCity(connection, city):
     cursor.execute(sql, (city,))
     result = cursor.fetchall()
     return result[0][0]
+
 
 def findAllCities(connection):
     cities = []
@@ -168,6 +188,7 @@ def findAllCities(connection):
         cities.append(city[0])
     return cities
 
+
 def checkIfRoomExist(connection, link):
     cursor = connection.cursor()
     sql = "SELECT * FROM rooms where link = %s"
@@ -175,15 +196,20 @@ def checkIfRoomExist(connection, link):
     result = cursor.fetchall()
     return bool(result)
 
+
 def saveRoom(connection, room):
     cursor = connection.cursor()
     sql = """
         INSERT INTO rooms 
-            (portal_id, city_id, link, rent_value, rent_type, neighbourhood, title, configuration, persons, bedrooms, bathrooms, creation_date)
+            (portal_id, city_id, link, rent_value, rent_type, neighbourhood, title, configuration, persons, 
+            bedrooms, bathrooms, creation_date)
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
-    cursor.execute(sql, (0, room.cityId, room.link, room.rentValue, room.rentType, room.neighbourhood, room.title, room.configuration, room.persons, room.bedrooms, room.bathrooms, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+    cursor.execute(sql, (
+        0, room.cityId, room.link, room.rentValue, room.rentType, room.neighbourhood, room.title, room.configuration,
+        room.persons, room.bedrooms, room.bathrooms, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
     connection.commit()
+
 
 def updateRoom(connection, room):
     cursor = connection.cursor()
@@ -201,17 +227,48 @@ def updateRoom(connection, room):
             modification_date = %s
         WHERE link = %s
     """
-    cursor.execute(sql, (room.cityId, room.rentValue, room.rentType, room.neighbourhood, room.title, room.configuration, room.persons, room.bedrooms, room.bathrooms, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), room.link))
+    cursor.execute(sql, (
+        room.cityId, room.rentValue, room.rentType, room.neighbourhood, room.title, room.configuration, room.persons,
+        room.bedrooms, room.bathrooms, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), room.link))
     connection.commit()
+
+
+def markAllRoomsInCityAsInactive(connection, cityId):
+    cursor = connection.cursor()
+    sql = """
+        UPDATE rooms SET
+            is_active = 0
+        WHERE city_id = %s
+    """
+    cursor.execute(sql, (cityId,))
+    connection.commit()
+
+
+def markAllFoundsAsActive(connection, roomLinks):
+    for roomLink in roomLinks:
+        markCityAsActiveByLink(connection, roomLink)
+
+
+def markCityAsActiveByLink(connection, link):
+    cursor = connection.cursor()
+    sql = """
+        UPDATE rooms SET
+            is_active = 1
+        WHERE link = %s
+    """
+    cursor.execute(sql, (link,))
+    connection.commit()
+
 
 def createDatabaseConnection():
     dbConnection = mysql.connector.connect(
-    host="tronxi.ddns.net",
-    user="portal",
-    password="portalpass",
-    database="portal"
+        host="localhost",
+        user="portal",
+        password="portalpass",
+        database="portal"
     )
     return dbConnection
+
 
 def createDriver():
     chrome_options = Options()

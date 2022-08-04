@@ -11,26 +11,27 @@ CREATE TABLE `portal`.`cities` (
 
 
 CREATE TABLE `rooms` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `portal_id` int NOT NULL,
-  `city_id` int NOT NULL,
-  `link` varchar(512) DEFAULT NULL,
-  `rent_value` varchar(45) DEFAULT NULL,
-  `rent_type` varchar(45) DEFAULT NULL,
-  `neighbourhood` varchar(100) DEFAULT NULL,
-  `title` varchar(512) DEFAULT NULL,
-  `configuration` varchar(512) DEFAULT NULL,
-  `persons` varchar(45) DEFAULT NULL,
-  `bedrooms` varchar(45) DEFAULT NULL,
-  `bathrooms` varchar(45) DEFAULT NULL,
-  `creation_date` datetime DEFAULT NULL,
-  `modification_date` datetime DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `fk_portal_idx` (`portal_id`),
-  KEY `fk_city_idx` (`city_id`),
-  CONSTRAINT `fk_city` FOREIGN KEY (`city_id`) REFERENCES `cities` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
-  CONSTRAINT `fk_portal` FOREIGN KEY (`portal_id`) REFERENCES `portals` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-);
+                         `id` int NOT NULL AUTO_INCREMENT,
+                         `portal_id` int NOT NULL,
+                         `city_id` int NOT NULL,
+                         `link` varchar(512) DEFAULT NULL,
+                         `rent_value` varchar(45) DEFAULT NULL,
+                         `rent_type` varchar(45) DEFAULT NULL,
+                         `neighbourhood` varchar(100) DEFAULT NULL,
+                         `title` varchar(512) DEFAULT NULL,
+                         `configuration` varchar(512) DEFAULT NULL,
+                         `persons` varchar(45) DEFAULT NULL,
+                         `bedrooms` varchar(45) DEFAULT NULL,
+                         `bathrooms` varchar(45) DEFAULT NULL,
+                         `is_active` int DEFAULT '0',
+                         `creation_date` datetime DEFAULT NULL,
+                         `modification_date` datetime DEFAULT NULL,
+                         PRIMARY KEY (`id`),
+                         KEY `fk_portal_idx` (`portal_id`),
+                         KEY `fk_city_idx` (`city_id`),
+                         CONSTRAINT `fk_city` FOREIGN KEY (`city_id`) REFERENCES `cities` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
+                         CONSTRAINT `fk_portal` FOREIGN KEY (`portal_id`) REFERENCES `portals` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
+) ;
 
 INSERT INTO `portal`.`cities` (`id`, `name`) VALUES ('0', 'coimbra');
 INSERT INTO `portal`.`cities` (`id`, `name`) VALUES ('1', 'valencia');
