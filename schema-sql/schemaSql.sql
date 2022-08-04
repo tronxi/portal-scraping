@@ -33,6 +33,8 @@ CREATE TABLE `rooms` (
                          CONSTRAINT `fk_portal` FOREIGN KEY (`portal_id`) REFERENCES `portals` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
 ) ;
 
+INSERT INTO `portal`.`portals` (`id`, `name`) VALUES ('0', 'uniplaces');
+
 INSERT INTO `portal`.`cities` (`id`, `name`) VALUES ('0', 'coimbra');
 INSERT INTO `portal`.`cities` (`id`, `name`) VALUES ('1', 'valencia');
 INSERT INTO `portal`.`cities` (`id`, `name`) VALUES ('2', 'lisbon');

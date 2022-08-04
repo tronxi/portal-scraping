@@ -265,7 +265,8 @@ def createDatabaseConnection():
         host="localhost",
         user="portal",
         password="portalpass",
-        database="portal"
+        database="portal",
+        port=3307
     )
     return dbConnection
 
